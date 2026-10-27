@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cookie Clicker</title>
+  <meta name="theme-color" content="#26201a">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0,#51402c,#26201a 64%);color:#f8edd8;font:16px Arial,Helvetica,sans-serif;display:grid;place-items:center}.card{width:min(440px,calc(100% - 32px));padding:30px;background:#171412e8;border:2px ridge #aa8956;box-shadow:0 18px 60px #0009;text-align:center}.cookie{font-size:56px;line-height:1}.eyebrow{font-size:10px;letter-spacing:.2em;color:#c7a36a;font-weight:bold;margin-top:12px}h1{font:700 32px Georgia,serif;margin:8px 0 6px}p{color:#c7bba5;font-size:13px;line-height:1.55;margin:0 0 22px}.profiles{display:grid;gap:8px;margin-bottom:17px}.profile,.play{width:100%;background:#30271e;color:#f8e8c8;border:1px solid #8f7145;padding:12px 14px;text-align:left;font-weight:bold;cursor:pointer}.profile:hover,.play:hover{background:#493823}.profile.selected{outline:2px solid #d3a857;background:#463521}.play{background:#bb8539;color:#21170d;text-align:center;border-color:#e3bd79;font-size:15px}.play:disabled{opacity:.5;cursor:not-allowed}.new-profile{display:flex;gap:7px;margin:10px 0 0}.new-profile input{flex:1;min-width:0;padding:11px;background:#0f0d0b;color:#fff;border:1px solid #776344}.new-profile button{padding:10px 12px;background:#665035;border:1px solid #a5885d;color:white;cursor:pointer}.hint{margin:20px 0 0;color:#9c8b71;font-size:11px}.hint a{color:#d7b372}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="cookie" aria-hidden="true">🍪</div>
+    <div class="eyebrow">A LITTLE GAME WITH BIG NUMBERS</div>
+    <h1>Cookie Clicker</h1>
+    <p>Choose a player profile to continue. Each profile keeps its own save in this browser.</p>
+    <div id="profiles" class="profiles"></div>
+    <button id="play" class="play" disabled>Play</button>
+    <form id="newProfile" class="new-profile">
+      <input id="name" maxlength="24" autocomplete="off" placeholder="New player name" aria-label="New player name">
+      <button type="submit">Add</button>
+    </form>
+    <p class="hint">To move a save to another browser, use <b>Options → Export save</b> in the game.</p>
+  </main>
+  <script>
+    const key = "cookie-clicker-pages-profiles-v1";
+    const list = document.getElementById("profiles");
+    const play = document.getElementById("play");
+    let profiles = [];
+    let selected = "";
+    try { profiles = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+    if (!Array.isArray(profiles)) profiles = [];
+    function draw() {
+      list.replaceChildren();
+      for (const profile of profiles) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "profile" + (selected === profile.id ? " selected" : "");
+        button.textContent = profile.name;
+        button.onclick = () => { selected = profile.id; draw(); };
+        list.appendChild(button);
+      }
+      play.disabled = !selected;
+    }
+    document.getElementById("newProfile").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("name");
+      const name = input.value.trim();
+      if (!name) return;
+      const existing = profiles.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (existing) selected = existing.id;
+      else {
+        const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        profiles.push({ name, id });
+        selected = id;
+        localStorage.setItem(key, JSON.stringify(profiles));
+      }
+      input.value = "";
+      draw();
+    });
+    play.onclick = () => { if (selected) location.href = "cookieclicker/index.html?saveSlot=" + encodeURIComponent(selected); };
+    draw();
+  </script>
+</body>
+</html>
