@@ -17,6 +17,15 @@ function readBackup(key: string): Backup | null {
   return null;
 }
 
+function saveTime(value: string): number {
+  try {
+    const encoded = unescape(value);
+    if (!encoded.endsWith("!END!")) return 0;
+    const runDetails = atob(encoded.slice(0, -5)).split("|")[2];
+    return Number(runDetails?.split(";")[2]) || 0;
+  } catch { return 0; }
+}
+
 export default function Mirror({ account, signInUrl, signOutUrl }: Props) {
   const slot = account ? "u-" + account.id.replace(/[^a-zA-Z0-9_-]/g, "") : "guest";
   const gameKey = "CookieClickerGame-" + slot;
@@ -34,7 +43,10 @@ export default function Mirror({ account, signInUrl, signOutUrl }: Props) {
       let local = readBackup(backupKey);
       let native: string | null = null;
       try { native = localStorage.getItem(gameKey); } catch { /* Browser storage may be unavailable. */ }
-      if (native && !local) local = { save: native, updatedAt: 0 };
+      // The game's own autosave may be newer than our last account backup.
+      if (native && (!local || saveTime(native) > saveTime(local.save))) {
+        local = { save: native, updatedAt: saveTime(native) };
+      }
       let selected = local;
       let fromRemote = false;
       if (account) {
