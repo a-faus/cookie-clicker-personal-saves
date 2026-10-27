@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   let body: unknown;
   try { body = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid save." }, { status: 400 }); }
   const value = body && typeof body === "object" ? body as { version?: unknown; save?: unknown } : null;
-  if (value?.version !== 1 || typeof value.save !== "string" || !value.save.includes("!END!") || value.save.length > 1_500_000) {
+  if (value?.version !== 1 || typeof value.save !== "string" || !/(?:!|%21)END(?:!|%21)$/i.test(value.save) || value.save.length > 1_500_000) {
     return NextResponse.json({ error: "Invalid save." }, { status: 400 });
   }
   const updatedAt = Date.now();

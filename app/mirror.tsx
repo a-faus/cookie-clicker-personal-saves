@@ -32,9 +32,11 @@ export default function Mirror({ account, signInUrl, signOutUrl }: Props) {
     let cancelled = false;
     async function prepare() {
       let local = readBackup(backupKey);
-      const native = localStorage.getItem(gameKey);
+      let native: string | null = null;
+      try { native = localStorage.getItem(gameKey); } catch { /* Browser storage may be unavailable. */ }
       if (native && !local) local = { save: native, updatedAt: 0 };
       let selected = local;
+      let fromRemote = false;
       if (account) {
         try {
           const response = await fetch("/api/save", { cache: "no-store" });
@@ -42,15 +44,18 @@ export default function Mirror({ account, signInUrl, signOutUrl }: Props) {
             const data = await response.json() as { save?: string | null; updatedAt?: number };
             if (data.save && (!selected || (data.updatedAt || 0) > selected.updatedAt)) {
               selected = { save: data.save, updatedAt: data.updatedAt || 0 };
+              fromRemote = true;
             }
           }
         } catch { /* Continue from the local backup. */ }
       }
       if (cancelled) return;
       if (selected?.save) {
-        localStorage.setItem(gameKey, selected.save);
-        localStorage.setItem(backupKey, JSON.stringify(selected));
-        lastSent.current = selected.save;
+        try {
+          localStorage.setItem(gameKey, selected.save);
+          localStorage.setItem(backupKey, JSON.stringify(selected));
+        } catch { /* The game can still run without browser storage. */ }
+        lastSent.current = fromRemote ? selected.save : "";
       }
       setLoaded(true);
       setStatus(account ? "Account save ready" : "Saved on this browser");
@@ -66,8 +71,10 @@ export default function Mirror({ account, signInUrl, signOutUrl }: Props) {
     try { value = game.WriteSave(1); } catch { return; }
     if (!value || value.length < 20) return;
     const updatedAt = Date.now();
-    localStorage.setItem(gameKey, value);
-    localStorage.setItem(backupKey, JSON.stringify({ save: value, updatedAt }));
+    try {
+      localStorage.setItem(gameKey, value);
+      localStorage.setItem(backupKey, JSON.stringify({ save: value, updatedAt }));
+    } catch { /* Continue to cloud sync if local storage is unavailable. */ }
     if (!account) { setStatus("Saved on this browser"); return; }
     if (value === lastSent.current || writing.current) return;
     writing.current = true;
